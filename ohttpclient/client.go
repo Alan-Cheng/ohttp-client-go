@@ -9,116 +9,116 @@ import (
 	"github.com/chris-wood/ohttp-go"
 )
 
-// Config 用來傳入必要參數
+// Config contains necessary parameters
 type Config struct {
 	GatewayURL string
 	KeysURL    string
 	Verbose    bool
-	Request    *http.Request // 支援傳入任何 http.Request
+	Request    *http.Request // Supports any http.Request
 }
 
-// Response 包裝回傳資料
+// Response wraps the returned data
 type Response struct {
 	Status int
 	Body   []byte
 }
 
-// DoRequest 執行 OHTTP 請求並回傳解密後結果
+// DoRequest executes OHTTP request and returns decrypted result
 func DoRequest(cfg Config) (*Response, error) {
 	if cfg.Verbose {
 		fmt.Printf("Gateway URL: %s\nTarget URL: %s\nKeys URL: %s\n\n", cfg.GatewayURL, cfg.Request.URL.String(), cfg.KeysURL)
 	}
 
-	// 1) 下載 OHTTP 公鑰
+	// 1) Download OHTTP public key
 	if cfg.Verbose {
-		fmt.Printf("下載 OHTTP 金鑰檔案: %s\n", cfg.KeysURL)
+		fmt.Printf("Downloading OHTTP key file: %s\n", cfg.KeysURL)
 	}
 	resp, err := http.Get(cfg.KeysURL)
 	if err != nil {
-		return nil, fmt.Errorf("下載金鑰檔案失敗: %w", err)
+		return nil, fmt.Errorf("failed to download key file: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("下載金鑰檔案非 200 狀態: %d", resp.StatusCode)
+		return nil, fmt.Errorf("key file download returned non-200 status: %d", resp.StatusCode)
 	}
 	keyConfigBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("讀取金鑰檔案失敗: %w", err)
+		return nil, fmt.Errorf("failed to read key file: %w", err)
 	}
 
-	// 2) 解析 PublicConfig
+	// 2) Parse PublicConfig
 	publicConfig, err := ohttp.UnmarshalPublicConfig(keyConfigBytes)
 	if err != nil {
-		return nil, fmt.Errorf("解析金鑰配置失敗: %w", err)
+		return nil, fmt.Errorf("failed to parse key config: %w", err)
 	}
 	if cfg.Verbose {
-		fmt.Println("成功解析金鑰配置。")
+		fmt.Println("Successfully parsed key config.")
 	}
 
-	// 3) 封裝內層請求為 BHTTP
+	// 3) Encapsulate inner request as BHTTP
 	binaryReq := ohttp.BinaryRequest(*cfg.Request)
 	breqBytes, err := binaryReq.Marshal()
 	if err != nil {
-		return nil, fmt.Errorf("序列化 BHTTP 失敗: %w", err)
+		return nil, fmt.Errorf("failed to serialize BHTTP: %w", err)
 	}
 	if cfg.Verbose {
-		fmt.Println("已建立 BHTTP 內層請求。")
+		fmt.Println("Created BHTTP inner request.")
 	}
 
-	// 4) 封裝 OHTTP
+	// 4) Encapsulate OHTTP
 	client := ohttp.NewDefaultClient(publicConfig)
 	encReq, ctx, err := client.EncapsulateRequest(breqBytes)
 	if err != nil {
-		return nil, fmt.Errorf("封裝請求失敗: %w", err)
+		return nil, fmt.Errorf("failed to encapsulate request: %w", err)
 	}
 	if cfg.Verbose {
-		fmt.Println("已成功封裝 OHTTP 請求。")
+		fmt.Println("Successfully encapsulated OHTTP request.")
 	}
 
-	// 5) 發送到 Gateway
+	// 5) Send to Gateway
 	relayRequest, err := http.NewRequest(http.MethodPost, cfg.GatewayURL, bytes.NewReader(encReq.Marshal()))
 	if err != nil {
-		return nil, fmt.Errorf("建立外層 POST 請求失敗: %w", err)
+		return nil, fmt.Errorf("failed to create outer POST request: %w", err)
 	}
 	relayRequest.Header.Set("Content-Type", "message/ohttp-req")
 
 	relayResp, err := http.DefaultClient.Do(relayRequest)
 	if err != nil {
-		return nil, fmt.Errorf("發送到 Gateway 失敗: %w", err)
+		return nil, fmt.Errorf("failed to send to Gateway: %w", err)
 	}
 	defer relayResp.Body.Close()
 	if relayResp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(relayResp.Body)
-		return nil, fmt.Errorf("Gateway 外層狀態非 200: %d, body=%s", relayResp.StatusCode, string(body))
+		return nil, fmt.Errorf("Gateway outer status not 200: %d, body=%s", relayResp.StatusCode, string(body))
 	}
 
-	// 6) 解封 OHTTP 回應
+	// 6) Decapsulate OHTTP response
 	encRespBytes, err := io.ReadAll(relayResp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("讀取外層回應失敗: %w", err)
+		return nil, fmt.Errorf("failed to read outer response: %w", err)
 	}
 	encResp, err := ohttp.UnmarshalEncapsulatedResponse(encRespBytes)
 	if err != nil {
-		return nil, fmt.Errorf("解析封裝回應失敗: %w", err)
+		return nil, fmt.Errorf("failed to parse encapsulated response: %w", err)
 	}
 	brespBytes, err := ctx.DecapsulateResponse(encResp)
 	if err != nil {
-		return nil, fmt.Errorf("解密回應失敗: %w", err)
+		return nil, fmt.Errorf("failed to decrypt response: %w", err)
 	}
 
 	httpResp, err := ohttp.UnmarshalBinaryResponse(brespBytes)
 	if err != nil {
-		return nil, fmt.Errorf("BHTTP 轉回 http.Response 失敗: %w", err)
+		return nil, fmt.Errorf("failed to convert BHTTP back to http.Response: %w", err)
 	}
 	defer httpResp.Body.Close()
 
 	body, err := io.ReadAll(httpResp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("讀取內層回應失敗: %w", err)
+		return nil, fmt.Errorf("failed to read inner response: %w", err)
 	}
 
 	if cfg.Verbose {
-		fmt.Println("成功解密回應！")
+		fmt.Println("Successfully decrypted response!")
 	}
 
 	return &Response{

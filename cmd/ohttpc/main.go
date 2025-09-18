@@ -29,16 +29,16 @@ var rootCmd = &cobra.Command{
 	Short: "OHTTP curl-like client",
 	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// 使用 -t 指定 URL，否則取最後參數
+		// Use -t to specify URL, otherwise use the last argument
 		if targetFlag != "" {
 			targetURL = targetFlag
 		} else if len(args) > 0 {
 			targetURL = args[0]
 		} else {
-			return fmt.Errorf("未指定目標 URL")
+			return fmt.Errorf("target URL not specified")
 		}
 
-		// 建立 body reader
+		// Create body reader
 		var bodyReader *bytes.Reader
 		if data != "" {
 			bodyReader = bytes.NewReader([]byte(data))
@@ -46,13 +46,13 @@ var rootCmd = &cobra.Command{
 			bodyReader = bytes.NewReader(nil)
 		}
 
-		// 建立 HTTP request
+		// Create HTTP request
 		req, err := http.NewRequest(method, targetURL, bodyReader)
 		if err != nil {
-			return fmt.Errorf("建立請求失敗: %w", err)
+			return fmt.Errorf("failed to create request: %w", err)
 		}
 
-		// 設定 Headers
+		// Set Headers
 		for _, h := range headers {
 			parts := strings.SplitN(h, ":", 2)
 			if len(parts) == 2 {
@@ -60,7 +60,7 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
-		// 呼叫 OHTTP library
+		// Call OHTTP library
 		resp, err := ohttpclient.DoRequest(ohttpclient.Config{
 			GatewayURL: gatewayURL,
 			KeysURL:    keysURL,
@@ -71,7 +71,7 @@ var rootCmd = &cobra.Command{
 			return err
 		}
 
-		// verbose 輸出 request
+		// verbose output request
 		if verbose {
 			fmt.Printf("> %s %s\n", method, targetURL)
 			for k, v := range req.Header {
@@ -89,7 +89,7 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
-		// 普通輸出
+		// Normal output
 		fmt.Printf("< HTTP %d\n", resp.Status)
 		fmt.Println(string(resp.Body))
 		return nil
@@ -105,7 +105,7 @@ func init() {
 	rootCmd.Flags().StringArrayVarP(&headers, "header", "H", nil, "Custom header")
 	rootCmd.Flags().BoolVarP(&prettyJSON, "json", "j", false, "Pretty print JSON response if applicable")
 
-	// 新增 -t / --target 別名
+	// Add -t / --target alias
 	rootCmd.Flags().StringVarP(&targetFlag, "target", "t", "", "Target URL (alias)")
 
 	rootCmd.MarkFlagRequired("gateway")
