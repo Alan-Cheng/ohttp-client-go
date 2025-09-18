@@ -1,4 +1,4 @@
-module ohttp-client-test
+module github.com/Alan-Cheng/ohttp-client-go
 
 go 1.21
 
