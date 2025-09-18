@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 
 	"github.com/chris-wood/ohttp-go"
@@ -79,7 +80,7 @@ func runOHTTPRequest(cmd *cobra.Command, args []string) error {
 	}
 	
 	// 從URL解析host
-	parsedURL, err := http.ParseRequestURI(targetURL)
+	parsedURL, err := url.Parse(targetURL)
 	if err != nil {
 		return fmt.Errorf("解析目標URL失敗: %w", err)
 	}
