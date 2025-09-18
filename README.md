@@ -1,8 +1,9 @@
 # OHTTP Client Go
 
-A command-line tool and Go library for testing Oblivious HTTP (OHTTP) gateways, specifically designed to work with [Cloudflare Privacy Gateway Server](https://github.com/cloudflare/privacy-gateway-server-go).
+A command-line tool and Go library for testing Oblivious HTTP (OHTTP) gateways, specifically designed to work with [Cloudflare Privacy Gateway Server](https://github.com/cloudflare/privacy-gateway-server-go).It allows sending OHTTP requests either via the command-line tool or by importing this library into your Go project.
 
-(用於測試 Oblivious HTTP (OHTTP) Gateway 的指令工具和 Go 函式庫，設計目的是用於與[Cloudflare Privacy Gateway Server](https://github.com/cloudflare/privacy-gateway-server-go)互動。)
+用於測試 Oblivious HTTP (OHTTP) Gateway 的指令工具和 Go 函式庫，設計目的是用於與[Cloudflare Privacy Gateway Server](https://github.com/cloudflare/privacy-gateway-server-go)互動。
+你可以透過命令列工具或將此函式庫引入專案，來送出 OHTTP 請求。
 
 ## Background
 
